@@ -36,6 +36,7 @@
 
 ATCA_STATUS calib_wakeup_i2c(ATCADevice device)
 {
+    sudoCliPrintDebug("caliWakei2c", SUDO_CLI_DEBUG_COMMENT("calib_wakeup_i2c() function call begin"));
     ATCA_STATUS status = ATCA_BAD_PARAM;
     uint8_t second_byte = 0x01;  // I2C general call should not interpreted as an addr write
     ATCAIface iface = atGetIFace(device);
@@ -52,53 +53,70 @@ ATCA_STATUS calib_wakeup_i2c(ATCADevice device)
         {
             if (100000UL < ATCA_IFACECFG_VALUE(iface->mIfaceCFG, atcai2c.baud))
             {
+
+                sudoCliPrintDebug("caliWakei2c", SUDO_CLI_DEBUG_COMMENT("too big baudrate, changing..."));
                 temp = 100000UL;
                 status = atcontrol(iface, ATCA_HAL_CHANGE_BAUD, &temp, sizeof(temp));
                 if (ATCA_UNIMPLEMENTED == status)
                 {
+                    sudoCliPrintDebug("caliWakei2c", SUDO_CLI_DEBUG_COMMENT("hal control is not implemented, cannot change baudrate"));
                     status = atcontrol(iface, ATCA_HAL_CONTROL_WAKE, NULL, 0);
+                    sudoCliPrintDebugWithStatus("caliWakei2c", status, 16, SUDO_CLI_DEBUG_COMMENT("tried to call hal based wakeup"));
                     break;
                 }
             }
             else
             {
                 status = ATCA_SUCCESS;
+                sudoCliPrintDebug("caliWakei2c", SUDO_CLI_DEBUG_COMMENT("good baudrate for wakeup token"));
             }
 
     #ifdef ATCA_ECC204_SUPPORT
+            sudoCliPrintDebug("caliWakei2c", SUDO_CLI_DEBUG_COMMENT("ECC2002 support enabled"));
             if (ECC204 == atcab_get_device_type_ext(device))
             {
                 (void)atsend(iface, address, NULL, 0);
+                sudoCliPrintDebug("caliWakei2c", SUDO_CLI_DEBUG_COMMENT("ECC204 wakeup"));
             }
             else
             {
 
                 (void)atsend(iface, 0x00, &second_byte, sizeof(second_byte));
             }
+    // #elif defined(SUDO_SYNCHRONIZATION)
+            // (void)second_byte;
+            // sudoI2cSynchronizeAteBus();
     #else
             (void)atsend(iface, 0x00, &second_byte, sizeof(second_byte));
+            sudoCliPrintDebug("caliWakei2c", SUDO_CLI_DEBUG_COMMENT("atsend() writes 0x000 to address 0"));
     #endif
+            // (void)second_byte;
+            // sudoI2cSynchronizeAteBus();
             atca_delay_us(atca_iface_get_wake_delay(iface));
 
             rxlen = sizeof(wake);
             if (ATCA_SUCCESS == status)
             {
                 status = atreceive(iface, address, (uint8_t*)&wake, &rxlen);
+                sudoCliPrintDebugWithStatus("caliWakei2c", status, 16, SUDO_CLI_DEBUG_COMMENT("atreceive() function result"));
             }
 
             if ((ATCA_SUCCESS == status) && (100000UL < ATCA_IFACECFG_VALUE(iface->mIfaceCFG, atcai2c.baud)))
             {
                 temp = ATCA_IFACECFG_VALUE(iface->mIfaceCFG, atcai2c.baud);
                 status = atcontrol(iface, ATCA_HAL_CHANGE_BAUD, &temp, sizeof(temp));
-            }
+                sudoCliPrintDebugWithStatus("caliWakei2c", status, 16, SUDO_CLI_DEBUG_COMMENT("read success, atcontrol() tries to change back baud"));
+            } else {sudoCliPrintDebug("caliWakei2c", SUDO_CLI_DEBUG_COMMENT("Baudrate is not changed"));}
 
             if (ATCA_SUCCESS == status)
             {
                 status = hal_check_wake((uint8_t*)&wake, rxlen);
-            }
+                sudoCliPrintDebugWithStatus("caliWakei2c", status, 16, SUDO_CLI_DEBUG_COMMENT("hal_check_wake() checks if device is awake"));
+            } else {sudoCliPrintDebug("caliWakei2c", SUDO_CLI_DEBUG_COMMENT("error while reading or changing baud"));}
         }
         while (0 < retries-- && ATCA_SUCCESS != status);
-    }
+        sudoCliPrintDebugWithStatus("caliWakei2c", status, 16, SUDO_CLI_DEBUG_COMMENT("loop finished, returning result"));
+    } else {sudoCliPrintDebug("caliWakei2c", SUDO_CLI_DEBUG_COMMENT("ATCAIface iface is NULL"));}
     return status;
 }
 
@@ -123,12 +141,14 @@ ATCA_STATUS calib_wakeup(ATCADevice device)
         else if (ATCA_I2C_IFACE == iface->mIfaceCFG->iface_type)
         {
             status = calib_wakeup_i2c(device);
+            sudoCliPrintDebugWithStatus("calExecCom", status, 16, SUDO_CLI_DEBUG_COMMENT("calib_wakeup_i2c() called"));
         }
         else
         {
             status = ATCA_SUCCESS;
         }
 #endif
+        sudoCliPrintDebugWithStatus("calib_wake", status, 16, SUDO_CLI_DEBUG_COMMENT(" returning..."));
     }
 
     return status;

@@ -34,7 +34,6 @@
  */
 
 #include "cryptoauthlib.h"
-
 #if CALIB_READ_ENC_EN
 #include "host/atca_host.h"
 #endif
@@ -60,6 +59,7 @@
  */
 ATCA_STATUS calib_read_zone(ATCADevice device, uint8_t zone, uint16_t slot, uint8_t block, uint8_t offset, uint8_t *data, uint8_t len)
 {
+    sudoCliPrintDebug("calReadZon", SUDO_CLI_DEBUG_COMMENT("calib_read_zone() function call begin"));
     ATCAPacket packet;
     ATCA_STATUS status = ATCA_GEN_FAIL;
     uint16_t addr;
@@ -73,6 +73,7 @@ ATCA_STATUS calib_read_zone(ATCADevice device, uint8_t zone, uint16_t slot, uint
         // The get address function checks the remaining variables
         if ((status = calib_get_addr(zone, slot, block, offset, &addr)) != ATCA_SUCCESS)
         {
+            sudoCliPrintDebugWithStatus("calReadZon", status, 16, SUDO_CLI_DEBUG_COMMENT("calib_get_addr() error, break loop"));
             ATCA_TRACE(status, "calib_get_addr - failed");
             break;
         }
@@ -89,12 +90,15 @@ ATCA_STATUS calib_read_zone(ATCADevice device, uint8_t zone, uint16_t slot, uint
 
         if ((status = atRead(atcab_get_device_type_ext(device), &packet)) != ATCA_SUCCESS)
         {
+            sudoCliPrintDebugWithStatus("calReadZon", status, 16, SUDO_CLI_DEBUG_COMMENT("atRead() error, break loop"));
             ATCA_TRACE(status, "atRead - failed");
             break;
         }
+        sudoCliPrintDebug("calReadZon", SUDO_CLI_DEBUG_COMMENT("atRead() success"));
 
         if ((status = atca_execute_command(&packet, device)) != ATCA_SUCCESS)
         {
+            sudoCliPrintDebugWithStatus("calReadZon", status, 16, SUDO_CLI_DEBUG_COMMENT("atca_execute_command() error, break loop"));
             ATCA_TRACE(status, "calib_read_zone - execution failed");
             break;
         }
@@ -306,6 +310,7 @@ ATCA_STATUS calib_read_enc(ATCADevice device, uint16_t key_id, uint8_t block, ui
  */
 ATCA_STATUS calib_read_bytes_zone(ATCADevice device, uint8_t zone, uint16_t slot, size_t offset, uint8_t *data, size_t length)
 {
+    sudoCliPrintDebug("calReadByZ", SUDO_CLI_DEBUG_COMMENT("calib_read_bytes_zone() function call begin"));
     ATCA_STATUS status = ATCA_GEN_FAIL;
     size_t zone_size = 0;
     uint8_t read_buf[32];
@@ -322,6 +327,7 @@ ATCA_STATUS calib_read_bytes_zone(ATCADevice device, uint8_t zone, uint16_t slot
 
     if (length == 0)
     {
+        sudoCliPrintDebug("calReadByZ", SUDO_CLI_DEBUG_COMMENT("0 byte read"));
         return ATCA_SUCCESS;  // Always succeed reading 0 bytes
     }
 
@@ -331,6 +337,7 @@ ATCA_STATUS calib_read_bytes_zone(ATCADevice device, uint8_t zone, uint16_t slot
     {
         if (ATCA_SUCCESS != (status = calib_get_zone_size(device, zone, slot, &zone_size)))
         {
+            sudoCliPrintDebugWithStatus("calReadByZ", status, 16, SUDO_CLI_DEBUG_COMMENT("calib_get_zone_size() error, break while{}"));
             ATCA_TRACE(status, "calib_get_zone_size - failed");
             break;
         }
@@ -352,6 +359,7 @@ ATCA_STATUS calib_read_bytes_zone(ATCADevice device, uint8_t zone, uint16_t slot
             // Read next chunk of data
             if (ATCA_SUCCESS != (status = calib_read_zone(device, zone, slot, (uint8_t)cur_block, (uint8_t)cur_offset, read_buf, read_size)))
             {
+                sudoCliPrintDebugWithStatus("calReadByZ", status, 16, SUDO_CLI_DEBUG_COMMENT("calib_read_zone() error, break while{}"));
                 ATCA_TRACE(status, "calib_read_zone - falied");
                 break;
             }
@@ -390,11 +398,12 @@ ATCA_STATUS calib_read_bytes_zone(ATCADevice device, uint8_t zone, uint16_t slot
         }
         if (status != ATCA_SUCCESS)
         {
+            sudoCliPrintDebug("calReadByZ", SUDO_CLI_DEBUG_COMMENT("fail after while(){}, break dowhile{}"));
             break;
         }
     }
     while (false);
-
+    sudoCliPrintDebug("calReadByZ", SUDO_CLI_DEBUG_COMMENT("returning from fucntion with the result"));
     return status;
 }
 

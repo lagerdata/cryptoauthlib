@@ -50,11 +50,13 @@
  */
 ATCA_STATUS calib_info_base(ATCADevice device, uint8_t mode, uint16_t param2, uint8_t* out_data)
 {
+    sudoCliPrintDebug("calInfBase", SUDO_CLI_DEBUG_COMMENT("calib_info_base() function call begin"));
     ATCAPacket packet;
     ATCA_STATUS status = ATCA_GEN_FAIL;
 
     if (device == NULL)
     {
+        sudoCliPrintDebug("calInfBase", SUDO_CLI_DEBUG_COMMENT("device is NULL, returning"));
         return ATCA_TRACE(ATCA_BAD_PARAM, "NULL pointer received");
     }
 
@@ -66,9 +68,12 @@ ATCA_STATUS calib_info_base(ATCADevice device, uint8_t mode, uint16_t param2, ui
     {
         if ((status = atInfo(atcab_get_device_type_ext(device), &packet)) != ATCA_SUCCESS)
         {
+            sudoCliPrintDebugWithStatus("calInfBase", status, 16, SUDO_CLI_DEBUG_COMMENT("atInfo() error, returnin..."));
             ATCA_TRACE(status, "atInfo - failed");
             break;
         }
+
+        sudoCliPrintDebugWithStatus("calInfBase", status, 16, SUDO_CLI_DEBUG_COMMENT("atInfo() result"));
 
         if ((status = atca_execute_command(&packet, device)) != ATCA_SUCCESS)
         {
@@ -77,6 +82,7 @@ ATCA_STATUS calib_info_base(ATCADevice device, uint8_t mode, uint16_t param2, ui
             if (((INFO_MODE_LOCK_STATUS == mode) || (INFO_MODE_KEY_VALID == mode))
                 && (ECC204 == device->mIface.mIfaceCFG->devtype))
             {
+                sudoCliPrintDebug("calInfBase", SUDO_CLI_DEBUG_COMMENT("actually ECC204 device"));
                 if (status == ATCA_CHECKMAC_VERIFY_FAILED)
                 {
                     status = ATCA_SUCCESS;
@@ -84,6 +90,7 @@ ATCA_STATUS calib_info_base(ATCADevice device, uint8_t mode, uint16_t param2, ui
             }
             else
             {
+                sudoCliPrintDebugWithStatus("calInfBase", status, 16, SUDO_CLI_DEBUG_COMMENT("atca_execute_command() error"));
                 ATCA_TRACE(status, "calib_info_base - execution failed");
                 break;
             }
@@ -91,19 +98,28 @@ ATCA_STATUS calib_info_base(ATCADevice device, uint8_t mode, uint16_t param2, ui
 
         uint8_t response = packet.data[ATCA_COUNT_IDX];
 
+        sudoCliPrintDebugWithStatus("calInfBase", (uint32_t)response, 10, SUDO_CLI_DEBUG_COMMENT("number of bytes received"));
+
         if (response && out_data)
         {
             if (((INFO_MODE_LOCK_STATUS == mode) || (INFO_MODE_KEY_VALID == mode))
                 && (ECC204 == device->mIface.mIfaceCFG->devtype))
             {
+                sudoCliPrintDebug("calInfBase", SUDO_CLI_DEBUG_COMMENT("actually ECC204 device"));
                 memcpy(out_data, &packet.data[ATCA_RSP_DATA_IDX], 1);
             }
             else if (response >= 7)
             {
+                sudoCliPrintDebug("calInfBase", SUDO_CLI_DEBUG_COMMENT("copying response below:"));
+                for(int i = 1; i<=4; i++)
+                {
+                    sudoCliPrintBytes(SUDO_CLI_BYTE(&packet.data[i]));
+                }
                 memcpy(out_data, &packet.data[ATCA_RSP_DATA_IDX], 4);
             }
             else
             {
+                sudoCliPrintDebug("calInfBase", SUDO_CLI_DEBUG_COMMENT("something is no yes"));
                 // do nothing
             }
 
@@ -121,8 +137,10 @@ ATCA_STATUS calib_info_base(ATCADevice device, uint8_t mode, uint16_t param2, ui
  */
 ATCA_STATUS calib_info(ATCADevice device, uint8_t* revision)
 {
+    sudoCliPrintDebug("calib_info", SUDO_CLI_DEBUG_COMMENT("calib_info() function call begin"));
     if (revision == NULL)
     {
+        sudoCliPrintDebug("calib_info", SUDO_CLI_DEBUG_COMMENT("revision is NULL, returning..."));
         return ATCA_TRACE(ATCA_BAD_PARAM, "NULL pointer received");
     }
 

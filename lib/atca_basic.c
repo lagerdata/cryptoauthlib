@@ -28,7 +28,6 @@
 
 #include "atca_basic.h"
 #include "atca_version.h"
-
 #if defined(ATCA_USE_CONSTANT_HOST_NONCE)
 #if defined(_MSC_VER)
 #pragma message("Warning : Using a constant host nonce with atcab_read_enc, atcab_write_enc, etcc., can allow spoofing of a device by replaying previously recorded messages")
@@ -70,6 +69,7 @@ ATCA_STATUS atcab_version(char *ver_str)
  */
 ATCA_STATUS atcab_init_ext(ATCADevice* device, ATCAIfaceCfg *cfg)
 {
+    sudoCliPrintDebug("atbInitExt", SUDO_CLI_DEBUG_COMMENT("atcab_init_ext() function call begin"));
     ATCA_STATUS status = ATCA_GEN_FAIL;
 
     if (device)
@@ -86,10 +86,13 @@ ATCA_STATUS atcab_init_ext(ATCADevice* device, ATCAIfaceCfg *cfg)
         status = initATCADevice(cfg, &g_atcab_device);
         if (status != ATCA_SUCCESS)
         {
+            sudoCliPrintDebug("atbInitExt", SUDO_CLI_DEBUG_COMMENT("initATCADevice() error, returnin..."));
             return status;
         }
+        else {sudoCliPrintDebugWithStatus("atbInitExt  ", status, 16, SUDO_CLI_DEBUG_COMMENT("finitATCADevice()" success));}
         *device = &g_atcab_device;
 #else
+        sudoCliPrintDebug("atbInitExt", SUDO_CLI_DEBUG_COMMENT("initATCADevice function is not called"));
         if (NULL != (*device = newATCADevice(cfg)))
         {
             status = ATCA_SUCCESS;
@@ -104,6 +107,7 @@ ATCA_STATUS atcab_init_ext(ATCADevice* device, ATCAIfaceCfg *cfg)
             {
                 if ((status = calib_read_bytes_zone(*device, ATCA_ZONE_CONFIG, 0, ATCA_CHIPMODE_OFFSET, &(*device)->clock_divider, 1)) != ATCA_SUCCESS)
                 {
+                    sudoCliPrintDebugWithStatus("atbInitExt:", status, 16, SUDO_CLI_DEBUG_COMMENT("calib_read_bytes_zone() error, returning..."));
                     return status;
                 }
                 (*device)->clock_divider &= ATCA_CHIPMODE_CLOCK_DIV_MASK;
@@ -1434,19 +1438,25 @@ ATCA_STATUS atcab_info_base(uint8_t mode, uint16_t param2, uint8_t* out_data)
  */
 ATCA_STATUS atcab_info(uint8_t* revision)
 {
+    sudoCliPrintDebug("atcab_info", SUDO_CLI_DEBUG_COMMENT("atcab_info() function call begin"));
     ATCA_STATUS status = ATCA_UNIMPLEMENTED;
     ATCADeviceType dev_type = atcab_get_device_type();
 
     if (atcab_is_ca_device(dev_type))
     {
 #if ATCA_CA_SUPPORT
+        sudoCliPrintDebug("atcab_info", SUDO_CLI_DEBUG_COMMENT("this is a ca device"));
         status = calib_info(_gDevice, revision);
+        sudoCliPrintDebug("atcab_info", SUDO_CLI_DEBUG_COMMENT("calib_info() result"));
 #endif
     }
     else if (atcab_is_ta_device(dev_type))
     {
+        sudoCliPrintDebug("atcab_info", SUDO_CLI_DEBUG_COMMENT("this is a ta device"));
 #if ATCA_TA_SUPPORT
         status = talib_info_compat(_gDevice, revision);
+#else
+        sudoCliPrintDebug("atcab_info", SUDO_CLI_DEBUG_COMMENT("ta is not supported"));
 #endif
     }
     else
@@ -3661,7 +3671,7 @@ ATCA_STATUS atcab_verify_stored(const uint8_t* message, const uint8_t* signature
 
 /** \brief Executes the Verify command, which verifies a signature (ECDSA
  *         verify operation) with a public key stored in the device.
- *         keyConfig.reqrandom bit should be set and the message to be signed 
+ *         keyConfig.reqrandom bit should be set and the message to be signed
  *         should be already loaded into TempKey for all devices.
  *
  * Please refer to TEST(atca_cmd_basic_test, verify_stored_on_reqrandom_set) in

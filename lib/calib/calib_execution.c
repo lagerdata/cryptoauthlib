@@ -436,6 +436,7 @@ ATCA_STATUS calib_execute_receive(ATCADevice device, uint8_t device_address, uin
  */
 ATCA_STATUS calib_execute_command(ATCAPacket* packet, ATCADevice device)
 {
+    sudoCliPrintDebug("calExecCom", SUDO_CLI_DEBUG_COMMENT("calib_execute_command() function call begin"));
     ATCA_STATUS status;
     uint32_t execution_or_wait_time;
     uint32_t max_delay_count;
@@ -462,6 +463,7 @@ ATCA_STATUS calib_execute_command(ATCAPacket* packet, ATCADevice device)
         {
             if ((status = calib_get_execution_time(packet->opcode, device)) != ATCA_SUCCESS)
             {
+                sudoCliPrintDebugWithStatus("calExecCom", status, 16, SUDO_CLI_DEBUG_COMMENT("calib_get_execution_time() error, returning..."));
                 return status;
             }
             execution_or_wait_time = device->execution_time_msec;
@@ -474,9 +476,14 @@ ATCA_STATUS calib_execute_command(ATCAPacket* packet, ATCADevice device)
         {
             if (ATCA_DEVICE_STATE_ACTIVE != device->device_state)
             {
+                sudoCliPrintDebug("calExecCom",  SUDO_CLI_DEBUG_COMMENT("device is sleeping"));
                 if (ATCA_SUCCESS == (status = calib_wakeup(device)))
                 {
+                    sudoCliPrintDebug("calExecCom",  SUDO_CLI_DEBUG_COMMENT("calib_wakeup() success"));
                     device->device_state = ATCA_DEVICE_STATE_ACTIVE;
+                }
+                else{
+                    sudoCliPrintDebugWithStatus("calExecCom", status, 16, SUDO_CLI_DEBUG_COMMENT("calib_wakeup() error"));
                 }
             }
 
