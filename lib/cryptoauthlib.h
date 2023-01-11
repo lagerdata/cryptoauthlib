@@ -35,6 +35,8 @@
 #include <string.h>
 #include <stdarg.h>
 
+#include "app_cli.h"
+
 /** Library Configuration File - All build attributes should be included in
     atca_config.h */
 #include "atca_config_check.h"
